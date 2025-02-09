@@ -243,9 +243,15 @@ void boudaryNodeAdjustment(vector<int> &l,vector<int> &dk,vector<int> &lk,queue<
 
                     transfer(dk,lk,l,i,l[i],l[neighbor]);
                     l[i]=l[neighbor];
-
-                    if (!Excute(lk[tmpl[i]],lktmp[tmpl[i]],lk[l[neighbor]],lktmp[l[neighbor]],dk[tmpl[i]],dktmp[tmpl[i]],lk[l[neighbor]],lktmp[l[neighbor]] ) )
+                    
+                    if (modularity(dk,lk)<modularity(dktmp,lktmp)){
+                        dk=dktmp;
+                        lk=lktmp;
                         l=tmpl;
+                    }
+
+                    // if (!Excute(lk[tmpl[i]],lktmp[tmpl[i]],lk[l[neighbor]],lktmp[l[neighbor]],dk[tmpl[i]],dktmp[tmpl[i]],lk[l[neighbor]],lktmp[l[neighbor]] ) )
+                    //     l=tmpl;
                 }
 
             for (int i=1;i<=s;i++)
@@ -292,12 +298,12 @@ void EPD(){
 
     int numCompetitor=pow(2, int( log2(pop) ) );
    
-    for (int p=pop;p>=numCompetitor+1;p--){
-        x.erase(x.begin() + p);
-        dk.erase(dk.begin() + p);
-        lk.erase(lk.begin() + p);   
-        --pop;
-    }
+    // for (int p=pop;p>=numCompetitor+1;p--){
+    //     x.erase(x.begin() + p);
+    //     dk.erase(dk.begin() + p);
+    //     lk.erase(lk.begin() + p);   
+    //     --pop;
+    // }
 
     //tourament
     vector<int> idx(pop);
@@ -314,14 +320,33 @@ void EPD(){
     x = newx;
     dk = newdk;
     lk = newlk;
-    
-    for (int p=1;p<=pop;p+=2){
-        // cout<<p<<"\n";
+    uniform_real_distribution disEli(0.0,1.0);
+
+    for (int p=1;p<pop;p+=2){
+        // cout<<p<<" "<<pop<<"\n";
         if (modularity(dk[p],lk[p]) > modularity(dk[p+1],lk[p+1])){
-            mimic(x[p+1],dk[p+1],lk[p+1],x[p],dk[p],lk[p]);
+            // cout<<1<<"\n";
+            if (disEli(gen)>eliminateRate)
+                mimic(x[p+1],dk[p+1],lk[p+1],x[p],dk[p],lk[p]);
+            else{
+                x.erase(x.begin() + p+1);
+                dk.erase(dk.begin() + p+1);
+                lk.erase(lk.begin() + p+1);
+                --pop;
+                --p;
+            }
         }
         else {
-            mimic(x[p],dk[p],lk[p],x[p+1],dk[p+1],lk[p+1]);
+            // cout<<1<<"\n";
+            if (disEli(gen)>eliminateRate)
+                mimic(x[p],dk[p],lk[p],x[p+1],dk[p+1],lk[p+1]);
+            else {
+                x.erase(x.begin() + p);
+                dk.erase(dk.begin() + p);
+                lk.erase(lk.begin() + p);
+                --pop;
+                --p;
+            }
         }
     }
 }
@@ -381,8 +406,9 @@ void EP_WOCD(){
                 if (!dd[i]) remainComs[p].push(i); 
         }
 
-        // cout<<macom<<"\n";
-        EPD();     
+        
+        EPD();   
+        // cout<<pop<<"\n"  ;
     }    
 
     cout<<ans<<"\n";
