@@ -20,6 +20,8 @@ mt19937 gen(rd());
 
 vector<queue<int>> remainComs(pop+1);
 
+const double eliminateRate=0.4;
+
 double modularity(vector<int> dk,vector<int> lk){
     double Q=0;
 
@@ -242,12 +244,6 @@ void boudaryNodeAdjustment(vector<int> &l,vector<int> &dk,vector<int> &lk,queue<
                     transfer(dk,lk,l,i,l[i],l[neighbor]);
                     l[i]=l[neighbor];
 
-                    // if (modularity(dk,lk)<modularity(dktmp,lktmp)){
-                    //     dk=dktmp;
-                    //     lk=lktmp;
-                    //     l=tmpl;
-                    // }
-
                     if (!Excute(lk[tmpl[i]],lktmp[tmpl[i]],lk[l[neighbor]],lktmp[l[neighbor]],dk[tmpl[i]],dktmp[tmpl[i]],lk[l[neighbor]],lktmp[l[neighbor]] ) )
                         l=tmpl;
                 }
@@ -257,6 +253,18 @@ void boudaryNodeAdjustment(vector<int> &l,vector<int> &dk,vector<int> &lk,queue<
         }
     }
 }
+
+void mimic(vector<int> &lLose,vector<int>&dkLose,vector<int> &lkLose, vector<int> &lWin,vector<int>&dkWin,vector<int> &lkWin){
+    uniform_int_distribution dis(1,N);
+    int v=dis(gen);
+
+    for (int i=1;i<=N;i++)
+        if (lLose[i]==lLose[v]){
+            transfer(dkLose,lkLose,lLose,i,lLose[i],xBest[i]);
+            lLose[i]=xBest[i];
+        }
+}
+
 void EPD(){
     if (x.size()<10) return;
 
@@ -267,6 +275,7 @@ void EPD(){
     }
 
     sort(modularityValues.begin(), modularityValues.end());
+    reverse(modularityValues.begin(),modularityValues.end());
 
     vector<vector<int>> sortedX(pop + 1);
     vector<vector<int>> sorteddk(pop + 1);
@@ -281,19 +290,40 @@ void EPD(){
     dk=sorteddk;
     lk=sortedlk;
 
-    double N_nor=pop-(pop/2+1)+1;
-    uniform_real_distribution<double> dis(0,1);
-    for (int i=pop/2+1;i<=pop;i++){
-        double C=1.0-exp(-double(i)/N_nor);
-        double rand=dis(gen);
-        if (rand<=C){
-            x.erase(x.begin() + i);
-            dk.erase(dk.begin() + i);
-            lk.erase(lk.begin() + i);   
-            --pop;
+    int numCompetitor=pow(2, int( log2(pop) ) );
+   
+    for (int p=pop;p>=numCompetitor+1;p--){
+        x.erase(x.begin() + p);
+        dk.erase(dk.begin() + p);
+        lk.erase(lk.begin() + p);   
+        --pop;
+    }
+
+    //tourament
+    vector<int> idx(pop);
+    iota(idx.begin(),idx.end(),1);
+    shuffle(idx.begin(), idx.end(), gen);
+    vector<vector<int>> newx(pop + 1);
+    vector<vector<int>> newdk(pop + 1);
+    vector<vector<int>> newlk(pop + 1);
+    for (int i = 0; i < pop; i++) {
+        newx[i + 1] = x[idx[i]];
+        newdk[i + 1] = dk[idx[i]];
+        newlk[i + 1] = lk[idx[i]];
+    }
+    x = newx;
+    dk = newdk;
+    lk = newlk;
+    
+    for (int p=1;p<=pop;p+=2){
+        // cout<<p<<"\n";
+        if (modularity(dk[p],lk[p]) > modularity(dk[p+1],lk[p+1])){
+            mimic(x[p+1],dk[p+1],lk[p+1],x[p],dk[p],lk[p]);
+        }
+        else {
+            mimic(x[p],dk[p],lk[p],x[p+1],dk[p+1],lk[p+1]);
         }
     }
-    
 }
 
 void updateLocation(vector<int> &l,int t,vector<int> &dk,vector<int> &lk,queue<int> &remainCom){
@@ -351,7 +381,7 @@ void EP_WOCD(){
                 if (!dd[i]) remainComs[p].push(i); 
         }
 
-        cout<<macom<<"\n";
+        // cout<<macom<<"\n";
         EPD();     
     }    
 
